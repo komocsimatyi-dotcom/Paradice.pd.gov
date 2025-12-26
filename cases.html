@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Ongoing Cases - Login</title>
+<link rel="stylesheet" href="style.css">
+<style>
+    body { background-color: #fdf6d3; font-family: Arial; text-align: center; }
+    .login-box, .upload-box { margin: 50px auto; padding: 20px; background: #fff; width: 300px; border: 2px solid #000; }
+    input { width: 90%; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 20px; background: #89CFF0; border: 2px solid #000; cursor: pointer; }
+    .file-list a { display: block; margin: 5px; color: blue; text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <img src="Logo.png" alt="Operation Nightfall" class="news-image">
+  <h1>Ongoing Cases</h1></header>
+
+<div class="login-box" id="loginBox">
+    <h2>Login</h2>
+    <input type="text" id="badge" placeholder="Badge Number">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+</div>
+
+<div class="upload-box" id="uploadBox" style="display:none;">
+    <h2>Upload Case PDF</h2>
+    <input type="file" id="fileInput" accept="application/pdf">
+    <button onclick="uploadFile()">Upload</button>
+    <h3>Uploaded Files:</h3>
+    <div class="file-list" id="fileList"></div>
+</div>
+
+<script>
+const correctBadge = "12345"; // Example badge number
+const correctPassword = "securepass"; // Example password
+
+function login() {
+    const badge = document.getElementById('badge').value;
+    const password = document.getElementById('password').value;
+    if (badge === correctBadge && password === correctPassword) {
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('uploadBox').style.display = 'block';
+        loadFiles();
+    } else {
+        alert('Invalid credentials');
+    }
+}
+
+function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const files = JSON.parse(localStorage.getItem('pdfFiles') || '[]');
+            files.push({ name: file.name, data: e.target.result });
+            localStorage.setItem('pdfFiles', JSON.stringify(files));
+            loadFiles();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function loadFiles() {
+    const fileList = document.getElementById('fileList');
+    fileList.innerHTML = '';
+    const files = JSON.parse(localStorage.getItem('pdfFiles') || '[]');
+    files.forEach(file => {
+        const link = document.createElement('a');
+        link.href = file.data;
+        link.textContent = file.name;
+        link.target = '_blank';
+        link.download = file.name;
+        fileList.appendChild(link);
+    });
+}
+</script>
+</body>
+</html>
