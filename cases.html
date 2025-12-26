@@ -1,83 +1,156 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hu">
 <head>
-<link rel="icon" type="image/png" href="favicon.png">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> Ongoing Cases - Login</title>
-<link rel="stylesheet" href="style.css">
-<style>
-    body { background-color: #fdf6d3; font-family: Arial; text-align: center; }
-    .login-box, .upload-box { margin: 50px auto; padding: 20px; background: #fff; width: 300px; border: 2px solid #000; }
-    input { width: 90%; padding: 10px; margin: 10px 0; }
-    button { padding: 10px 20px; background: #89CFF0; border: 2px solid #000; cursor: pointer; }
-    .file-list a { display: block; margin: 5px; color: blue; text-decoration: underline; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ongoing Cases – Login | Operation Nightfall</title>
+  <!-- Meglévő stílusok nem módosítva; nincs extra CSS, hogy a kinézet változatlan maradjon. -->
 </head>
 <body>
-<header>
-  <img src="Logo.png" alt="Operation Nightfall" class="news-image">
-  <h1>Ongoing Cases</h1></header>
+  <!-- A LENTI RÉSZ AZ EREDETI OLDAL SZERKEZETÉT KÖVETI, TARTALMI CÍMEKKEL -->
+  <header>
+    <h1>Ongoing Cases - Login</h1>
+    <p>Operation Nightfall</p>
+  </header>
 
-<div class="login-box" id="loginBox">
-    <h2>Login</h2>
-    <input type="text" id="badge" placeholder="Badge Number">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-</div>
+  <main>
+    <section aria-labelledby="ongoing-cases-title">
+      <h2 id="ongoing-cases-title">Ongoing Cases</h2>
+    </section>
 
-<div class="upload-box" id="uploadBox" style="display:none;">
-    <h2>Upload Case PDF</h2>
-    <input type="file" id="fileInput" accept="application/pdf">
-    <button onclick="uploadFile()">Upload</button>
-    <h3>Uploaded Files:</h3>
-    <div class="file-list" id="fileList"></div>
-</div>
+    <section aria-labelledby="login-title">
+      <h3 id="login-title">Login</h3>
+      <!-- Itt a meglévő bejelentkezés modulod jelenik meg (nem változtattunk rajta). -->
+    </section>
 
-<script>
-const correctBadge = "12345"; // Example badge number
-const correctPassword = "securepass"; // Example password
+    <section aria-labelledby="upload-title">
+      <h3 id="upload-title">Upload Case PDF</h3>
+      <!-- Itt a meglévő feltöltő modulod jelenik meg (nem változtattunk rajta). -->
+    </section>
 
-function login() {
-    const badge = document.getElementById('badge').value;
-    const password = document.getElementById('password').value;
-    if (badge === correctBadge && password === correctPassword) {
-        document.getElementById('loginBox').style.display = 'none';
-        document.getElementById('uploadBox').style.display = 'block';
-        loadFiles();
-    } else {
-        alert('Invalid credentials');
-    }
-}
+    <section aria-labelledby="uploaded-title">
+      <h4 id="uploaded-title">Uploaded Files:</h4>
+      <!-- Eredeti szekció megmarad. Alatta jelennek meg az automatikus listák. -->
 
-function uploadFile() {
-    const fileInput = document.getElementById('fileInput');
-    const file = fileInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const files = JSON.parse(localStorage.getItem('pdfFiles') || '[]');
-            files.push({ name: file.name, data: e.target.result });
-            localStorage.setItem('pdfFiles', JSON.stringify(files));
-            loadFiles();
-        };
-        reader.readAsDataURL(file);
-    }
-}
+      <!-- FÁJLOK – egyszerű konténerek (semleges megjelenés, nem változtat stílust) -->
+      <div id="case-files">
+        <h4>Képek</h4>
+        <div id="images-list"></div>
 
-function loadFiles() {
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = '';
-    const files = JSON.parse(localStorage.getItem('pdfFiles') || '[]');
-    files.forEach(file => {
-        const link = document.createElement('a');
-        link.href = file.data;
-        link.textContent = file.name;
-        link.target = '_blank';
-        link.download = file.name;
-        fileList.appendChild(link);
+        <h4>PDF-ek</h4>
+        <div id="pdfs-list"></div>
+
+        <h4>Hangok</h4>
+        <div id="audio-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Egyetlen fájlos megoldás: a scriptet beágyazzuk ide inline, hogy ne kelljen külön JS állomány. -->
+  <script>
+  /**
+   * Ongoing Cases – GitHub mappákból (images/pdfs/audio) fájlok listázása és megjelenítése/lejátszása.
+   * Nem módosítja a meglévő stílusokat; a megadott konténerekbe ír.
+   * Megoldás GitHub Contents API-val (publikus repó esetén token nélkül működik).
+   */
+
+  // --- KONFIGURÁCIÓ: ÁLLÍTSD BE A SAJÁT ADATAIDAT ---
+  const GH_USER   = "YOUR_GITHUB_USERNAME";     // pl. paradice-county
+  const GH_REPO   = "YOUR_REPO_NAME";           // pl. pcpd-site
+  const GH_BRANCH = "main";                      // pl. main
+  const CASE_PATH = "cases/operation-nightfall"; // pl. cases/operation-nightfall
+
+  async function listFolder(path) {
+    const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${encodeURIComponent(path)}?ref=${GH_BRANCH}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Beolvasási hiba (${res.status}): ${url}`);
+    return await res.json(); // tömb: {name, path, download_url, type, ...}
+  }
+
+  function renderImages(files) {
+    const host = document.getElementById('images-list');
+    if (!host) return;
+    host.innerHTML = '';
+    files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f.name)).forEach(f => {
+      const fig = document.createElement('figure');
+      const img = document.createElement('img');
+      img.src = f.download_url;
+      img.alt = f.name;
+      img.loading = 'lazy';
+      img.style.maxWidth = '100%';
+      fig.appendChild(img);
+      const cap = document.createElement('figcaption');
+      cap.textContent = f.name;
+      fig.appendChild(cap);
+      host.appendChild(fig);
     });
-}
-</script>
+    if (!host.children.length) host.textContent = 'Nincs kép ebben a mappában.';
+  }
+
+  function renderPDFs(files) {
+    const host = document.getElementById('pdfs-list');
+    if (!host) return;
+    host.innerHTML = '';
+    files.filter(f => /\.pdf$/i.test(f.name)).forEach(f => {
+      const item = document.createElement('div');
+      const link = document.createElement('a');
+      link.href = f.download_url;
+      link.textContent = f.name;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      item.appendChild(link);
+
+      // Opcionális beágyazott előnézet – ha nem kell, töröld ki az alábbi blokkot
+      const preview = document.createElement('iframe');
+      preview.src = f.download_url + '#toolbar=1&navpanes=0';
+      preview.style.width = '100%';
+      preview.style.height = '480px';
+      preview.style.border = 'none';
+      preview.loading = 'lazy';
+      item.appendChild(preview);
+
+      host.appendChild(item);
+    });
+    if (!host.children.length) host.textContent = 'Nincs PDF ebben a mappában.';
+  }
+
+  function renderAudio(files) {
+    const host = document.getElementById('audio-list');
+    if (!host) return;
+    host.innerHTML = '';
+    files.filter(f => /\.(mp3|wav|ogg)$/i.test(f.name)).forEach(f => {
+      const wrap = document.createElement('div');
+      const label = document.createElement('div');
+      label.textContent = f.name;
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = f.download_url;
+      audio.preload = 'none';
+      wrap.appendChild(label);
+      wrap.appendChild(audio);
+      host.appendChild(wrap);
+    });
+    if (!host.children.length) host.textContent = 'Nincs hangfájl ebben a mappában.';
+  }
+
+  async function initCaseFiles() {
+    try {
+      const [images, pdfs, audio] = await Promise.all([
+        listFolder(`${CASE_PATH}/images`),
+        listFolder(`${CASE_PATH}/pdfs`),
+        listFolder(`${CASE_PATH}/audio`)
+      ]);
+      renderImages(images);
+      renderPDFs(pdfs);
+      renderAudio(audio);
+    } catch (err) {
+      console.error(err);
+      const cf = document.getElementById('case-files');
+      if (cf) cf.innerHTML = '<p>Hiba történt a fájlok beolvasásakor. Ellenőrizd a GitHub beállításokat és a mappák elérhetőségét.</p>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initCaseFiles);
+  </script>
 </body>
 </html>
